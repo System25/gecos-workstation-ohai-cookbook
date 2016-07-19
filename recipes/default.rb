@@ -22,10 +22,18 @@ if !Ohai::Config[:plugin_path].include?(node['ohai']['plugin_path'])
 end
 Chef::Log.info("ohai plugins will be at: #{node['ohai']['plugin_path']}")
 
+if Gem.win_platform?
+	$admin_user = ENV["USERNAME"]
+	$admin_group = Ohai::Util::Win32::GroupHelper.windows_root_group_name
+else
+	$admin_user = 'root'
+	$admin_group = 'root'
+end
+
 rd = remote_directory node['ohai']['plugin_path'] do
   source 'plugins'
-  owner 'root'
-  group 'root'
+  owner $admin_user
+  group $admin_group
   mode 0755
   recursive true
   action :nothing
