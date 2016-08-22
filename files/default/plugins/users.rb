@@ -12,7 +12,7 @@ users_send = []
 
 if Gem.win_platform?
     # -------------------- Windows  ------------------------
-    cmd = ENV['SystemRoot'] + "\\System32\\net user"
+    cmd = ENV['SystemRoot'] + "\\System32\\net.exe user"
     output = %x( #{cmd} )
     
     output = output.to_s.split("\n")
@@ -33,29 +33,15 @@ if Gem.win_platform?
     output = output.gsub('\r', ' ').gsub('\n', ' ').gsub('\t', ' ')
     userdata = output.split()
     
-    # Get administrators local group
-    adminLocalGroup = ''
-    
-    cmd = ENV['SystemRoot'] + "\\System32\\net localgroup | findstr Administrators"
-    output = %x( #{cmd} )    
-    if output.chomp == "*Administrators"
-        adminLocalGroup = 'Administrators'
-    else
-        cmd = ENV['SystemRoot'] + "\\System32\\net localgroup | findstr Administradores"
-        output = %x( #{cmd} )    
-        if output.chomp == "*Administradores"
-            adminLocalGroup = 'Administradores'
-        end
-    end
-    
     # Check users
     userdata.each do |username|
-        print username
         isadmin = false
-        cmd = ENV['SystemRoot'] + "\\System32\\net localgroup #{adminLocalGroup} | findstr #{username}"
+        cmd = ENV['SystemRoot'] + "\\System32\\net.exe localgroup #{$admin_group} | "+ ENV['SystemRoot'] + "\\System32\\findstr.exe #{username}"
+		# print "cmp = '#{cmd}' \n"
         output = %x( #{cmd} )
         
-        if output.chomp == username
+		#print "output = '#{output.chomp.strip}' username = '#{username}'\n"
+        if output.chomp.strip == username
             isadmin = true
         end
         

@@ -23,7 +23,8 @@ end
 Chef::Log.info("ohai plugins will be at: #{node['ohai']['plugin_path']}")
 
 if Gem.win_platform?
-	$admin_user = ENV["USERNAME"]
+	# A group can be the owner of a file
+	$admin_user = Ohai::Util::Win32::GroupHelper.windows_root_group_name
 	$admin_group = Ohai::Util::Win32::GroupHelper.windows_root_group_name
 else
 	$admin_user = 'root'
