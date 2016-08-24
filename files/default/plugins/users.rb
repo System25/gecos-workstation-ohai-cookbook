@@ -12,54 +12,37 @@ users_send = []
 
 if Gem.win_platform?
     # -------------------- Windows  ------------------------
-    cmd = ENV['SystemRoot'] + "\\System32\\net.exe user"
-    output = %x( #{cmd} )
-    
-    output = output.to_s.split("\n")
-    
-    # Remove last line
-    output.pop
-
-    # Remove first four lines (header)
-    output.shift 
-    output.shift 
-    output.shift 
-    output.shift 
-
-    userProfileBase = 'C:\\Users\\'
-
-    # Extract usernames from output
-    output = output.join(" ")
-    output = output.gsub('\r', ' ').gsub('\n', ' ').gsub('\t', ' ')
-    userdata = output.split()
-    
-    # Check users
-    userdata.each do |username|
-        isadmin = false
-        cmd = ENV['SystemRoot'] + "\\System32\\net.exe localgroup #{$admin_group} | "+ ENV['SystemRoot'] + "\\System32\\findstr.exe #{username}"
-		# print "cmp = '#{cmd}' \n"
-        output = %x( #{cmd} )
-        
-		#print "output = '#{output.chomp.strip}' username = '#{username}'\n"
-        if output.chomp.strip == username
-            isadmin = true
-        end
-        
-        if File.directory?("#{userProfileBase}#{username}")
-            if username != "" and username != "Administrador" and username != "Administrator" and username != "DefaultAccount" and username != "Invitado" and username != "Guest"
-                users << Mash.new(
-                  :username => username,
-                  :home     => "#{userProfileBase}#{username}",
-                  :gid      => 0,
-                  :uid      => 0,
-                  :sudo     => isadmin
-                )
-                users_send << username
-            end
-        end
-        
-        
-    end
+	excludeUsers = ['', "Administrador", "Administrator", "DefaultAccount", "Invitado", "Guest", "Default", "Default User", "Public", "All Users"]
+    homedirs = Dir[ENV['SystemDrive'] + "/Users/*"].reject{ |f| not File.directory?(f) } + Dir[ENV['SystemDrive'] +"/Documents and Settings/*"].reject{ |f| not File.directory?(f) }
+    homedirs.each do |homedir|
+	  #print 'homedir='+homedir+"\n"
+      temp = homedir.split('/')
+      username=temp[temp.size()-1]
+	  #print 'username='+username+"\n"
+	  
+	  
+	  if  not excludeUsers.include? username
+		    isadmin = false
+		    cmd = ENV['SystemRoot'] + "\\System32\\net.exe localgroup #{$admin_group} | "+ ENV['SystemRoot'] + "\\System32\\findstr.exe #{username}"
+		    # print "cmp = '#{cmd}' \n"
+		    output = %x( #{cmd} )
+			
+		    #print "output = '#{output.chomp.strip}' username = '#{username}'\n"
+		    if output.chomp.strip == username
+			  isadmin = true
+		    end
+		  
+			users << Mash.new(
+			  :username => username,
+			  :home     => "#{userProfileBase}#{username}",
+			  :gid      => 0,
+			  :uid      => 0,
+			  :sudo     => isadmin
+			)
+			users_send << username
+	  end
+	  
+    end	
     
 else
     # -------------------- Linux  ------------------------
