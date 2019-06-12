@@ -20,16 +20,22 @@
 $ohai_new_config_syntax=Gem::Requirement.new('>= 8.6.0').satisfied_by?(Gem::Version.new(Ohai::VERSION))
 Chef::Log.debug("ohai_new_config_syntax = #{$ohai_new_config_syntax}")
 
+$plugin_path = if RUBY_PLATFORM.include?('mingw')
+                 'C:\\etc\\chef\\ohai_plugins'
+               else
+                 node['ohai']['plugin_path']
+               end
+
 if $ohai_new_config_syntax
-  if !Ohai.config[:plugin_path].include?(node['ohai']['plugin_path'])
-    Ohai.config[:plugin_path] << node['ohai']['plugin_path']
+  if !Ohai.config[:plugin_path].include?($plugin_path)
+    Ohai.config[:plugin_path] << $plugin_path
   end
 else
-  if !Ohai::Config[:plugin_path].include?(node['ohai']['plugin_path'])
-    Ohai::Config[:plugin_path] << node['ohai']['plugin_path']
+  if !Ohai::Config[:plugin_path].include?($plugin_path)
+    Ohai::Config[:plugin_path] << $plugin_path
   end
 end
-Chef::Log.info("ohai plugins will be at: #{node['ohai']['plugin_path']} ohai version is #{Ohai::VERSION}")
+Chef::Log.info("ohai plugins will be at: #{$plugin_path} ohai version is #{Ohai::VERSION}")
 
 version_major = Ohai::VERSION.split[0].to_i
 Chef::Log.info("ohai version major is #{version_major}")
@@ -38,10 +44,12 @@ if version_major > 6
 	source_path = 'plugins7'
 end
 
-rd = remote_directory node['ohai']['plugin_path'] do
+rd = remote_directory $plugin_path do
   source source_path
-  owner 'root'
-  group 'root'
+  if node[:platform] != 'windows'
+    owner 'root'
+    group 'root'
+  end
   mode 0755
   recursive true
   action :nothing
@@ -51,7 +59,7 @@ rd.run_action(:create)
 
 # only reload ohai if new plugins were dropped off OR
 # node['ohai']['plugin_path'] does not exists in client.rb
-regex = $ohai_new_config_syntax ? /ohai.plugin_path\s*<<\s*["']#{node['ohai']['plugin_path']}["']/ : /Ohai::Config\[:plugin_path\]\s*<<\s*["']#{node['ohai']['plugin_path']}["']/
+regex = $ohai_new_config_syntax ? /ohai.plugin_path\s*<<\s*["']#{$plugin_path}["']/ : /Ohai::Config\[:plugin_path\]\s*<<\s*["']#{$plugin_path}["']/
 Chef::Log.debug("regex = #{regex}")
 
 if rd.updated? || !(::IO.read(Chef::Config[:config_file]) =~ regex)
